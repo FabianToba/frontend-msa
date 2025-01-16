@@ -3,7 +3,7 @@ import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert } from 'rea
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Footer from '@/components/Footer';
-import {router, useRouter} from 'expo-router';
+import { useRouter } from 'expo-router';
 
 interface Appointment {
     id: number;
@@ -19,6 +19,7 @@ interface Appointment {
 export default function AppointmentsScreen() {
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [loading, setLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
         const fetchAppointments = async () => {
@@ -51,30 +52,25 @@ export default function AppointmentsScreen() {
         fetchAppointments();
     }, []);
 
-    const handleCancelAppointment = async (appointmentId: number) => {
+    const handleDeleteAppointment = async (appointmentId: number) => {
         try {
-            const response = await axios.put(
-                `http://192.168.1.130:8080/api/v1/appointment/${appointmentId}`,
-                { id: appointmentId, status: 'CANCELLED' } // Update the status of this appointment
+            const response = await axios.delete(
+                `http://192.168.1.130:8080/api/v1/appointment/${appointmentId}`
             );
 
             if (response.status === 200) {
-                // Update the local state to reflect the cancelled appointment
+                // Remove the deleted appointment from the local state
                 setAppointments((prevAppointments) =>
-                    prevAppointments.map((appointment) =>
-                        appointment.id === appointmentId
-                            ? { ...appointment, status: 'CANCELLED' }
-                            : appointment
-                    )
+                    prevAppointments.filter((appointment) => appointment.id !== appointmentId)
                 );
-                Alert.alert('Success', `The appointment ${appointmentId} has been cancelled.`);
+                Alert.alert('Success', `The appointment ${appointmentId} has been deleted.`);
             } else {
-                console.error('Failed to cancel the appointment:', response);
-                Alert.alert('Error', 'Failed to cancel the appointment. Please try again.');
+                console.error('Failed to delete the appointment:', response);
+                Alert.alert('Error', 'Failed to delete the appointment. Please try again.');
             }
         } catch (error) {
-            console.error('Error during appointment cancellation:', error);
-            Alert.alert('Error', 'An error occurred while cancelling the appointment.');
+            console.error('Error during appointment deletion:', error);
+            Alert.alert('Error', 'An error occurred while deleting the appointment.');
         }
     };
 
@@ -114,23 +110,10 @@ export default function AppointmentsScreen() {
                                 </Text>
                             </View>
                             <TouchableOpacity
-                                style={
-                                    appointment.status === 'COMPLETED' || appointment.status === 'CANCELLED'
-                                        ? [styles.button, styles.disabledButton]
-                                        : styles.button
-                                }
-                                disabled={appointment.status === 'COMPLETED' || appointment.status === 'CANCELLED'}
-                                onPress={() => handleCancelAppointment(appointment.id)}
+                                style={styles.button}
+                                onPress={() => handleDeleteAppointment(appointment.id)}
                             >
-                                <Text
-                                    style={
-                                        appointment.status === 'COMPLETED' || appointment.status === 'CANCELLED'
-                                            ? [styles.buttonText, styles.disabledButtonText]
-                                            : styles.buttonText
-                                    }
-                                >
-                                    Cancel Appointment
-                                </Text>
+                                <Text style={styles.buttonText}>Delete Appointment</Text>
                             </TouchableOpacity>
                         </View>
                     ))}
@@ -138,8 +121,10 @@ export default function AppointmentsScreen() {
             )}
 
             {/* Add Appointment Button */}
-            <TouchableOpacity style={styles.addButton}
-                              onPress={() => router.push('/add_appointment')}>
+            <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => router.push('/add_appointment')}
+            >
                 <Text style={styles.addButtonText}>Add Appointment</Text>
             </TouchableOpacity>
 
@@ -206,13 +191,10 @@ const styles = StyleSheet.create({
     },
     button: {
         marginTop: 10,
-        backgroundColor: '#ff0026',
+        backgroundColor: '#ff4d4d',
         paddingVertical: 10,
         borderRadius: 5,
         alignItems: 'center',
-    },
-    disabledButton: {
-        backgroundColor: '#d3d3d3',
     },
     subtitle: {
         fontSize: 16,
@@ -222,9 +204,6 @@ const styles = StyleSheet.create({
     buttonText: {
         color: '#fff',
         fontWeight: 'bold',
-    },
-    disabledButtonText: {
-        color: '#a9a9a9',
     },
     addButton: {
         backgroundColor: '#00BFFF',
