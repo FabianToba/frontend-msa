@@ -1,74 +1,138 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, TextInput, View, Text, Image, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function LoginScreen() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const router = useRouter();
 
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+    const handleLogin = async () => {
+        try {
+            console.log('Attempting login with:', { email, password });
+
+            // Make a login request to the backend
+            const response = await axios.post(
+                `http://192.168.1.130:8080/api/v1/patient/login`,
+                null,
+                {
+                    params: { email, password },
+                }
+            );
+
+            // Log the user data
+            const userData = response.data;
+            console.log('Login successful:', userData);
+
+            // Store user ID in AsyncStorage
+            await AsyncStorage.setItem('userId', userData.id.toString());
+
+            // Show a success message
+            alert('Login successful!');
+
+            // Redirect to a dashboard or home page
+            router.push('/(tabs)/explore_pacient');
+        } catch (error) {
+            // @ts-ignore
+            console.error('Error during login:', error.response?.data || error.message);
+
+            // Show an error message
+            alert('Invalid email or password. Please try again.');
+        }
+    };
+
+    return (
+        <View style={styles.container}>
+            <Image
+                source={require('@/assets/images/cross.png')}
+                style={styles.logo}
+            />
+            <Text style={styles.title}>SANTA FABGHICILIA</Text>
+
+            <Text style={styles.label}>E-mail</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="Enter e-mail address"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+            />
+
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="Enter password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+            />
+
+            <TouchableOpacity style={styles.button} onPress={handleLogin}>
+                <Text style={styles.buttonText}>Login</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => router.push('/register')}>
+                <Text style={styles.signUpText}>New here? Sign up</Text>
+            </TouchableOpacity>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        backgroundColor: '#fff',
+    },
+    logo: {
+        width: 100,
+        height: 100,
+        marginBottom: 20,
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#00BFFF',
+        marginBottom: 30,
+    },
+    label: {
+        alignSelf: 'flex-start',
+        fontSize: 16,
+        fontWeight: '500',
+        marginBottom: 5,
+        color: '#333',
+    },
+    input: {
+        width: '100%',
+        height: 40,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        paddingHorizontal: 10,
+        marginBottom: 15,
+        backgroundColor: '#f9f9f9',
+    },
+    button: {
+        backgroundColor: '#00BFFF',
+        borderRadius: 5,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        width: '100%',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    buttonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    signUpText: {
+        fontSize: 14,
+        color: '#00BFFF',
+        textDecorationLine: 'underline',
+    },
 });
