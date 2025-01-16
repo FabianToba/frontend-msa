@@ -1,23 +1,52 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import {
+    StyleSheet,
+    View,
+    Text,
+    ScrollView,
+    TouchableOpacity,
+    Modal,
+    Alert,
+} from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Footer from '@/components/Footer';
 
 interface Medicine {
+    id: number;
     name: string;
     dosage: string;
+    timesPerDay: number;
+}
+
+interface Patient {
+    id: number;
+    first_name: string;
+    last_name: string;
+    health_id: number;
+}
+
+interface Doctor {
+    id: number;
+    firstName: string;
+    lastName: string;
+    specialization: string;
+    availableHours: string[];
 }
 
 interface Prescription {
     id: number;
     date: string;
+    patient: Patient;
+    doctor: Doctor;
     medicines: Medicine[];
 }
 
 export default function PrescriptionsScreen() {
     const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
+    const [modalVisible, setModalVisible] = useState(false);
 
     useEffect(() => {
         const fetchPrescriptions = async () => {
@@ -50,9 +79,9 @@ export default function PrescriptionsScreen() {
         fetchPrescriptions();
     }, []);
 
-    const handleAddPrescription = () => {
-        console.log('Add Prescription button clicked');
-        // Navigate to Add Prescription Page or Handle the Logic
+    const handleMoreDetails = (prescription: Prescription) => {
+        setSelectedPrescription(prescription);
+        setModalVisible(true);
     };
 
     return (
@@ -73,19 +102,9 @@ export default function PrescriptionsScreen() {
                         <View key={prescription.id} style={styles.card}>
                             <Text style={styles.cardTitle}>{`Prescription ID: ${prescription.id || 'N/A'}`}</Text>
                             <Text style={styles.subtitle}>{`Date: ${prescription.date || 'N/A'}`}</Text>
-                            <Text style={styles.subtitle}>Medicines:</Text>
-                            {prescription.medicines && prescription.medicines.length > 0 ? (
-                                prescription.medicines.map((medicine, index) => (
-                                    <Text key={index} style={styles.medicineText}>
-                                        - {medicine.name || 'Unknown Medicine'}: {medicine.dosage || 'No Dosage'}
-                                    </Text>
-                                ))
-                            ) : (
-                                <Text style={styles.medicineText}>No medicines listed</Text>
-                            )}
                             <TouchableOpacity
                                 style={styles.button}
-                                onPress={() => console.log(`More details for prescription ${prescription.id}`)}
+                                onPress={() => handleMoreDetails(prescription)}
                             >
                                 <Text style={styles.buttonText}>More Details</Text>
                             </TouchableOpacity>
@@ -94,12 +113,50 @@ export default function PrescriptionsScreen() {
                 </ScrollView>
             )}
 
-            {/* Add Prescription Button */}
-            <TouchableOpacity style={styles.addButton} onPress={handleAddPrescription}>
-                <Text style={styles.addButtonText}>Add Prescription</Text>
-            </TouchableOpacity>
-
             <Footer />
+
+            {/* Modal for displaying prescription details */}
+            {selectedPrescription && (
+                <Modal
+                    visible={modalVisible}
+                    animationType="slide"
+                    transparent={true}
+                    onRequestClose={() => setModalVisible(false)}
+                >
+                    <View style={styles.modalContainer}>
+                        <ScrollView contentContainerStyle={styles.modalContent}>
+                            <Text style={styles.modalTitle}>Prescription Details</Text>
+                            <Text style={styles.modalText}>ID: {selectedPrescription.id}</Text>
+                            <Text style={styles.modalText}>Date: {selectedPrescription.date}</Text>
+
+                            <Text style={styles.modalSubtitle}>Patient Details</Text>
+                            <Text style={styles.modalText}>Name: {selectedPrescription.patient.first_name} {selectedPrescription.patient.last_name}</Text>
+                            <Text style={styles.modalText}>Health ID: {selectedPrescription.patient.health_id}</Text>
+
+                            <Text style={styles.modalSubtitle}>Doctor Details</Text>
+                            <Text style={styles.modalText}>Name: Dr. {selectedPrescription.doctor.firstName} {selectedPrescription.doctor.lastName}</Text>
+                            <Text style={styles.modalText}>Specialization: {selectedPrescription.doctor.specialization}</Text>
+
+                            <Text style={styles.modalSubtitle}>Medicines</Text>
+                            {selectedPrescription.medicines.map((medicine) => (
+                                <Text
+                                    key={medicine.id}
+                                    style={styles.modalText}
+                                >
+                                    - {medicine.name}: {medicine.dosage}, {medicine.timesPerDay} times/day
+                                </Text>
+                            ))}
+
+                            <TouchableOpacity
+                                style={styles.closeButton}
+                                onPress={() => setModalVisible(false)}
+                            >
+                                <Text style={styles.closeButtonText}>Close</Text>
+                            </TouchableOpacity>
+                        </ScrollView>
+                    </View>
+                </Modal>
+            )}
         </View>
     );
 }
@@ -159,10 +216,6 @@ const styles = StyleSheet.create({
         marginBottom: 5,
         color: '#555',
     },
-    medicineText: {
-        fontSize: 14,
-        color: '#333',
-    },
     button: {
         marginTop: 10,
         backgroundColor: '#00BFFF',
@@ -174,18 +227,43 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: 'bold',
     },
-    addButton: {
-        backgroundColor: '#00BFFF',
-        paddingVertical: 15,
-        borderRadius: 10,
+    modalContainer: {
+        flex: 10,
+        justifyContent: 'center',
         alignItems: 'center',
-        marginHorizontal: 20,
-        marginBottom: 100, // Adjust this value to place the button above the Footer
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
-    addButtonText: {
-        color: '#fff',
+    modalContent: {
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        marginTop: 60,
+        padding: 40,
+        width: '90%',
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    modalSubtitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: 15,
+    },
+    modalText: {
         fontSize: 16,
+        marginBottom: 5,
+    },
+    closeButton: {
+        marginTop: 20,
+        backgroundColor: '#ff0026',
+        paddingVertical: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+    },
+    closeButtonText: {
+        color: '#fff',
         fontWeight: 'bold',
     },
 });
-
